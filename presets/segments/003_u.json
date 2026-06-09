@@ -1,0 +1,14 @@
+{
+  "index": 3,
+  "label": "u",
+  "token": "u",
+  "start_time": 0.5,
+  "end_time": 0.78,
+  "duration": 0.28,
+  "rms_mean": 0.34419,
+  "zcr_mean": 0.0644,
+  "spectral_centroid_mean": 652.1,
+  "mfcc_mean": [-552.62, 0.0, 0.0, 0.0, 0.0],
+  "f0_mean": 333.3,
+  "controls": {"pitchShift": 0, "speedRatio": 1, "gainDb": 0, "formantShift": 0}
+}
