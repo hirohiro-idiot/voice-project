@@ -150,7 +150,7 @@ h2 {
 
 .meta-grid {
   display: grid;
-  grid-template-columns: repeat(6, minmax(0, 1fr));
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 10px;
 }
 
@@ -269,7 +269,7 @@ textarea:focus {
 
 table {
   width: 100%;
-  min-width: 840px;
+  min-width: 1120px;
   border-collapse: collapse;
   font-size: 0.9rem;
 }
