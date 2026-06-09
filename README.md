@@ -10,10 +10,12 @@ The long-term goal is to pair an audio file with matching text, extract vowel an
 - Enter matching transcript text for the uploaded audio
 - Draw waveform, spectrogram, and MFCC visualizations
 - Show duration, sample rate, channel count, RMS loudness, and estimated F0
-- Split the full audio evenly by transcript character count as a first alignment baseline
-- Extract per-segment RMS, estimated F0, and MFCC mean values
+- Estimate signal-based segmentation boundaries from silence, RMS drops, MFCC changes, and spectral changes
+- Split Japanese transcript text into simple mora units
+- Align estimated boundaries to mora count with candidate-prioritized interpolation
+- Extract per-segment RMS, ZCR, spectral centroid, estimated F0, and MFCC mean values
 - Export experiment JSON and Markdown from the browser
-- Keep research output folders for vowels, consonants, speakers, and experiment cards
+- Keep research output folders for vowels, consonants, speakers, segments, and experiment cards
 
 ## Implemented Structure
 
@@ -27,6 +29,7 @@ The long-term goal is to pair an audio file with matching text, extract vowel an
 |-- presets/
 |   |-- vowels/
 |   |-- consonants/
+|   |-- segments/
 |   `-- speakers/
 |-- experiment_cards/
 `-- README.md
@@ -46,7 +49,7 @@ Then open `http://localhost:8000`.
 
 ## Local Experiment Export
 
-For 16-bit PCM WAV files, the helper script can write preset JSON and an experiment card into the repository folders:
+For 16-bit PCM WAV files, the helper script can write segment JSON and an experiment card into the repository folders:
 
 ```bash
 python tools/generate_experiment.py sample.wav aiueo
@@ -54,12 +57,14 @@ python tools/generate_experiment.py sample.wav aiueo
 
 The script writes:
 
-- `presets/vowels/*.json`
+- `presets/segments/*.json`
 - `experiment_cards/Experiment_001.md`
 
 ## Implementation Notes
 
-Browser analysis uses the Web Audio API for decoding. FFT, Mel filterbank, MFCC calculation, RMS, F0 estimation, and simple text/audio alignment are implemented in JavaScript.
+Browser analysis uses the Web Audio API for decoding. FFT, Mel filterbank, MFCC calculation, RMS, zero-crossing rate, spectral centroid, F0 estimation, and signal-based text/audio alignment are implemented in JavaScript.
+
+This is not speech recognition. It is a research tool for estimating phoneme/mora boundary candidates from the audio signal and making the result visible for iteration.
 
 The preset schema already reserves neutral controls for future natural speech synthesis:
 
