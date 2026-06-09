@@ -1,6 +1,11 @@
 const fileInput = document.querySelector("#file-input");
 const dropZone = document.querySelector("#drop-zone");
 const statusPill = document.querySelector("#status-pill");
+const transcriptInput = document.querySelector("#transcript-input");
+const segmentCount = document.querySelector("#segment-count");
+const segmentTable = document.querySelector("#segment-table");
+const downloadJson = document.querySelector("#download-json");
+const downloadCard = document.querySelector("#download-card");
 const canvases = {
   waveform: document.querySelector("#waveform-canvas"),
   spectrogram: document.querySelector("#spectrogram-canvas"),
@@ -12,12 +17,29 @@ const meta = {
   duration: document.querySelector("#duration"),
   sampleRate: document.querySelector("#sample-rate"),
   channels: document.querySelector("#channels"),
+  rms: document.querySelector("#rms"),
+  f0: document.querySelector("#f0"),
 };
 
 const FFT_SIZE = 2048;
 const HOP_SIZE = 512;
 const MEL_BANDS = 40;
 const MFCC_COUNT = 20;
+const TOKEN_LABELS = new Map([
+  ["\u3042", "a"],
+  ["\u3044", "i"],
+  ["\u3046", "u"],
+  ["\u3048", "e"],
+  ["\u304a", "o"],
+  ["\u30a2", "a"],
+  ["\u30a4", "i"],
+  ["\u30a6", "u"],
+  ["\u30a8", "e"],
+  ["\u30aa", "o"],
+]);
+
+let currentExperiment = null;
+let currentAudio = null;
 
 function setStatus(text, state = "") {
   statusPill.textContent = text;
@@ -41,6 +63,64 @@ function mixToMono(buffer) {
     }
   }
   return mono;
+}
+
+function tokenizeTranscript(text) {
+  return Array.from(text.replace(/\s+/g, "")).map((token) => ({
+    token,
+    label: TOKEN_LABELS.get(token) || token.toLowerCase(),
+  }));
+}
+
+function calculateRms(samples, start = 0, end = samples.length) {
+  const from = Math.max(0, Math.floor(start));
+  const to = Math.min(samples.length, Math.max(from + 1, Math.floor(end)));
+  let sum = 0;
+  for (let i = from; i < to; i += 1) {
+    sum += samples[i] ** 2;
+  }
+  return Math.sqrt(sum / (to - from));
+}
+
+function estimateF0(samples, sampleRate, start = 0, end = samples.length) {
+  const from = Math.max(0, Math.floor(start));
+  const to = Math.min(samples.length, Math.max(from + 1, Math.floor(end)));
+  const maxSamples = Math.min(to - from, Math.floor(sampleRate * 1.5));
+  if (maxSamples < sampleRate * 0.03) return null;
+
+  const data = samples.slice(from, from + maxSamples);
+  const rms = calculateRms(data);
+  if (rms < 0.005) return null;
+
+  const minLag = Math.floor(sampleRate / 500);
+  const maxLag = Math.min(Math.floor(sampleRate / 50), data.length - 1);
+  let bestCorrelation = -Infinity;
+  const correlations = [];
+
+  for (let lag = minLag; lag <= maxLag; lag += 1) {
+    let correlation = 0;
+    for (let i = 0; i < data.length - lag; i += 1) {
+      correlation += data[i] * data[i + lag];
+    }
+    correlation /= data.length - lag;
+    correlations[lag] = correlation;
+    if (correlation > bestCorrelation) {
+      bestCorrelation = correlation;
+    }
+  }
+
+  if (bestCorrelation <= 0) return null;
+  const threshold = bestCorrelation * 0.82;
+  for (let lag = minLag + 1; lag < maxLag; lag += 1) {
+    if (
+      correlations[lag] >= threshold &&
+      correlations[lag] >= correlations[lag - 1] &&
+      correlations[lag] >= correlations[lag + 1]
+    ) {
+      return sampleRate / lag;
+    }
+  }
+  return null;
 }
 
 function drawAxes(ctx, width, height, title, xLabel = "Time", yLabel = "") {
@@ -273,6 +353,50 @@ function computeMfcc(frames, sampleRate) {
   });
 }
 
+function averageMfcc(mfccFrames) {
+  const sums = new Array(MFCC_COUNT).fill(0);
+  for (const frame of mfccFrames) {
+    for (let i = 0; i < MFCC_COUNT; i += 1) {
+      sums[i] += frame[i] || 0;
+    }
+  }
+  return sums.map((sum) => sum / Math.max(1, mfccFrames.length));
+}
+
+function extractSegmentFeatures(samples, sampleRate, duration, tokens) {
+  if (!tokens.length) return [];
+  const segmentDuration = duration / tokens.length;
+
+  return tokens.map(({ token, label }, index) => {
+    const startTime = index * segmentDuration;
+    const endTime = index === tokens.length - 1 ? duration : (index + 1) * segmentDuration;
+    const startSample = Math.floor(startTime * sampleRate);
+    const endSample = Math.min(samples.length, Math.floor(endTime * sampleRate));
+    const segmentSamples = padShortAudio(samples.slice(startSample, endSample));
+    const segmentFrames = createFrames(segmentSamples);
+    const mfccMean = averageMfcc(computeMfcc(segmentFrames, sampleRate));
+
+    return {
+      index: index + 1,
+      token,
+      label,
+      presetType: "vowel",
+      presetPath: `presets/vowels/${String(index + 1).padStart(3, "0")}_${label}.json`,
+      startTime,
+      endTime,
+      rms: calculateRms(samples, startSample, endSample),
+      estimatedF0: estimateF0(samples, sampleRate, startSample, endSample),
+      mfccMean,
+      controls: {
+        pitchShift: 0,
+        speedRatio: 1,
+        gainDb: 0,
+        formantShift: 0,
+      },
+    };
+  });
+}
+
 function normalizeSpectrogram(frames) {
   return frames.map((magnitudes) =>
     Array.from(magnitudes, (value) => 20 * Math.log10(Math.max(value, 1e-8))),
@@ -286,6 +410,130 @@ function padShortAudio(samples) {
   return padded;
 }
 
+function formatHz(value) {
+  return value ? `${value.toFixed(1)} Hz` : "-";
+}
+
+function escapeHtml(value) {
+  return String(value)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
+}
+
+function renderSegmentTable(segments) {
+  segmentCount.textContent = `${segments.length} segment${segments.length === 1 ? "" : "s"}`;
+  if (!segments.length) {
+    segmentTable.innerHTML = '<tr><td colspan="6">Upload audio and enter matching text to create segments.</td></tr>';
+    return;
+  }
+
+  segmentTable.innerHTML = segments
+    .map(
+      (segment) => `
+        <tr>
+          <td><code>${escapeHtml(segment.token)}</code> / <code>${escapeHtml(segment.label)}</code></td>
+          <td>${segment.startTime.toFixed(3)} s</td>
+          <td>${segment.endTime.toFixed(3)} s</td>
+          <td>${segment.rms.toFixed(5)}</td>
+          <td>${formatHz(segment.estimatedF0)}</td>
+          <td>${segment.mfccMean.slice(0, 5).map((value) => value.toFixed(2)).join(", ")} ...</td>
+        </tr>
+      `,
+    )
+    .join("");
+}
+
+function createExperiment(audioInfo, tokens, segments, overall) {
+  return {
+    schemaVersion: 1,
+    goal: "Reusable voice preset research dataset",
+    input: {
+      audioFile: audioInfo.fileName,
+      transcript: transcriptInput.value,
+      tokens,
+    },
+    audio: {
+      duration: audioInfo.duration,
+      sampleRate: audioInfo.sampleRate,
+      channels: audioInfo.channels,
+      rms: overall.rms,
+      estimatedF0: overall.estimatedF0,
+    },
+    segments,
+    presetDirectories: {
+      vowels: "presets/vowels/",
+      consonants: "presets/consonants/",
+      speakers: "presets/speakers/",
+    },
+    synthesisControls: {
+      pitchShift: "semitones",
+      speedRatio: "1.0 is original speed",
+      gainDb: "decibels",
+      formantShift: "relative formant offset",
+    },
+  };
+}
+
+function createExperimentCard(experiment) {
+  const rows = experiment.segments
+    .map(
+      (segment) =>
+        `| ${segment.index} | ${segment.token} | ${segment.label} | ${segment.startTime.toFixed(3)} | ${segment.endTime.toFixed(3)} | ${segment.rms.toFixed(5)} | ${segment.estimatedF0 ? segment.estimatedF0.toFixed(1) : "-"} | ${segment.mfccMean.slice(0, 5).map((value) => value.toFixed(2)).join(", ")} |`,
+    )
+    .join("\n");
+
+  return `# Experiment 001
+
+## Input
+
+- Audio: ${experiment.input.audioFile}
+- Text: ${experiment.input.transcript}
+- Duration: ${experiment.audio.duration.toFixed(3)} s
+- Sample rate: ${experiment.audio.sampleRate} Hz
+- RMS: ${experiment.audio.rms.toFixed(5)}
+- Estimated F0: ${experiment.audio.estimatedF0 ? `${experiment.audio.estimatedF0.toFixed(1)} Hz` : "-"}
+
+## Segment Features
+
+| # | Token | Label | Start | End | RMS | F0 | MFCC mean first 5 |
+|---|---|---|---:|---:|---:|---:|---|
+${rows || "| - | - | - | - | - | - | - | - |"}
+
+## Preset Direction
+
+The segment JSON schema includes neutral synthesis controls for future pitch, speed, gain, and formant adjustment.
+`;
+}
+
+function downloadTextFile(filename, content, type) {
+  const blob = new Blob([content], { type });
+  const link = document.createElement("a");
+  link.download = filename;
+  link.href = URL.createObjectURL(blob);
+  link.click();
+  URL.revokeObjectURL(link.href);
+}
+
+function updateResearchOutputs() {
+  if (!currentAudio) return;
+  const tokens = tokenizeTranscript(transcriptInput.value);
+  const segments = extractSegmentFeatures(
+    currentAudio.samples,
+    currentAudio.sampleRate,
+    currentAudio.duration,
+    tokens,
+  );
+  const overall = {
+    rms: calculateRms(currentAudio.samples),
+    estimatedF0: estimateF0(currentAudio.samples, currentAudio.sampleRate),
+  };
+  currentExperiment = createExperiment(currentAudio, tokens, segments, overall);
+  renderSegmentTable(segments);
+}
+
 async function analyzeFile(file) {
   setStatus("Loading", "busy");
   const arrayBuffer = await file.arrayBuffer();
@@ -297,6 +545,17 @@ async function analyzeFile(file) {
   meta.duration.textContent = formatDuration(audioBuffer.duration);
   meta.sampleRate.textContent = `${audioBuffer.sampleRate.toLocaleString()} Hz`;
   meta.channels.textContent = String(audioBuffer.numberOfChannels);
+  const overallRms = calculateRms(samples);
+  const overallF0 = estimateF0(samples, audioBuffer.sampleRate);
+  meta.rms.textContent = overallRms.toFixed(5);
+  meta.f0.textContent = formatHz(overallF0);
+  currentAudio = {
+    fileName: file.name,
+    samples,
+    duration: audioBuffer.duration,
+    sampleRate: audioBuffer.sampleRate,
+    channels: audioBuffer.numberOfChannels,
+  };
 
   setStatus("Analyzing", "busy");
   await new Promise((resolve) => setTimeout(resolve, 20));
@@ -306,6 +565,7 @@ async function analyzeFile(file) {
   drawHeatmap(canvases.mfcc, computeMfcc(frames, audioBuffer.sampleRate), "MFCC", "mfcc");
 
   await audioContext.close();
+  updateResearchOutputs();
   setStatus("Complete", "done");
 }
 
@@ -320,6 +580,7 @@ function handleFiles(files) {
 }
 
 fileInput.addEventListener("change", (event) => handleFiles(event.target.files));
+transcriptInput.addEventListener("input", updateResearchOutputs);
 
 dropZone.addEventListener("dragover", (event) => {
   event.preventDefault();
@@ -334,7 +595,7 @@ dropZone.addEventListener("drop", (event) => {
   handleFiles(event.dataTransfer.files);
 });
 
-document.querySelectorAll(".download-button").forEach((button) => {
+document.querySelectorAll("[data-canvas]").forEach((button) => {
   button.addEventListener("click", () => {
     const canvas = document.querySelector(`#${button.dataset.canvas}`);
     const link = document.createElement("a");
@@ -342,6 +603,20 @@ document.querySelectorAll(".download-button").forEach((button) => {
     link.href = canvas.toDataURL("image/png");
     link.click();
   });
+});
+
+downloadJson.addEventListener("click", () => {
+  if (!currentExperiment) return;
+  downloadTextFile(
+    "presets_vowels_experiment_001.json",
+    JSON.stringify(currentExperiment, null, 2),
+    "application/json",
+  );
+});
+
+downloadCard.addEventListener("click", () => {
+  if (!currentExperiment) return;
+  downloadTextFile("Experiment_001.md", createExperimentCard(currentExperiment), "text/markdown");
 });
 
 drawAxes(canvases.waveform.getContext("2d"), canvases.waveform.width, canvases.waveform.height, "Waveform");
