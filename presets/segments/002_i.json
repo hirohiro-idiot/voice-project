@@ -1,0 +1,14 @@
+{
+  "index": 2,
+  "label": "i",
+  "token": "i",
+  "start_time": 0.22,
+  "end_time": 0.5,
+  "duration": 0.28,
+  "rms_mean": 0.34429,
+  "zcr_mean": 0.0544,
+  "spectral_centroid_mean": 565.7,
+  "mfcc_mean": [-552.62, 0.0, 0.0, 0.0, 0.0],
+  "f0_mean": 275.9,
+  "controls": {"pitchShift": 0, "speedRatio": 1, "gainDb": 0, "formantShift": 0}
+}
