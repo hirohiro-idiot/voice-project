@@ -24,6 +24,18 @@
           <span class="drop-copy">Analyze WAV, MP3, M4A, and other browser-supported audio files</span>
         </label>
 
+        <section class="text-panel" aria-labelledby="text-title">
+          <div class="panel-header compact">
+            <h2 id="text-title">Transcript</h2>
+            <span id="segment-count">0 segments</span>
+          </div>
+          <textarea
+            id="transcript-input"
+            rows="3"
+            placeholder="Enter the matching text, for example: aiueo"
+          ></textarea>
+        </section>
+
         <div class="meta-grid" id="meta-grid" aria-live="polite">
           <div>
             <span>File</span>
@@ -40,6 +52,14 @@
           <div>
             <span>Channels</span>
             <strong id="channels">-</strong>
+          </div>
+          <div>
+            <span>RMS</span>
+            <strong id="rms">-</strong>
+          </div>
+          <div>
+            <span>Estimated F0</span>
+            <strong id="f0">-</strong>
           </div>
         </div>
 
@@ -68,6 +88,35 @@
             <canvas id="mfcc-canvas" width="1200" height="420"></canvas>
           </section>
         </div>
+
+        <section class="results-page" id="results-page" aria-labelledby="results-title">
+          <div class="panel-header">
+            <h2 id="results-title">Analysis Results</h2>
+            <div class="button-row">
+              <button class="download-button" id="download-json" type="button">JSON</button>
+              <button class="download-button" id="download-card" type="button">MD</button>
+            </div>
+          </div>
+          <div class="segment-table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Token</th>
+                  <th>Start</th>
+                  <th>End</th>
+                  <th>RMS</th>
+                  <th>F0</th>
+                  <th>MFCC Mean</th>
+                </tr>
+              </thead>
+              <tbody id="segment-table">
+                <tr>
+                  <td colspan="6">Upload audio and enter matching text to create segments.</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
       </section>
     </main>
 
