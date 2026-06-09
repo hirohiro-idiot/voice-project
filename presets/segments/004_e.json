@@ -1,0 +1,14 @@
+{
+  "index": 4,
+  "label": "e",
+  "token": "e",
+  "start_time": 0.78,
+  "end_time": 1.06,
+  "duration": 0.28,
+  "rms_mean": 0.34409,
+  "zcr_mean": 0.0329,
+  "spectral_centroid_mean": 395.0,
+  "mfcc_mean": [-552.62, 0.0, 0.0, 0.0, 0.0],
+  "f0_mean": 333.3,
+  "controls": {"pitchShift": 0, "speedRatio": 1, "gainDb": 0, "formantShift": 0}
+}
