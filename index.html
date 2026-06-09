@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Voice Project</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <main class="app-shell">
+      <section class="workspace" aria-labelledby="app-title">
+        <div class="topbar">
+          <div>
+            <p class="eyebrow">Browser audio analysis</p>
+            <h1 id="app-title">Voice Project</h1>
+          </div>
+          <div class="status-pill" id="status-pill">Ready</div>
+        </div>
+
+        <label class="drop-zone" id="drop-zone">
+          <input id="file-input" type="file" accept="audio/*,.wav" />
+          <span class="upload-icon" aria-hidden="true">+</span>
+          <span class="drop-title">Choose an audio file</span>
+          <span class="drop-copy">Analyze WAV, MP3, M4A, and other browser-supported audio files</span>
+        </label>
+
+        <div class="meta-grid" id="meta-grid" aria-live="polite">
+          <div>
+            <span>File</span>
+            <strong id="file-name">No file selected</strong>
+          </div>
+          <div>
+            <span>Duration</span>
+            <strong id="duration">-</strong>
+          </div>
+          <div>
+            <span>Sample Rate</span>
+            <strong id="sample-rate">-</strong>
+          </div>
+          <div>
+            <span>Channels</span>
+            <strong id="channels">-</strong>
+          </div>
+        </div>
+
+        <div class="visual-grid">
+          <section class="panel">
+            <div class="panel-header">
+              <h2>Waveform</h2>
+              <button class="download-button" type="button" data-canvas="waveform-canvas">PNG</button>
+            </div>
+            <canvas id="waveform-canvas" width="1200" height="360"></canvas>
+          </section>
+
+          <section class="panel">
+            <div class="panel-header">
+              <h2>Spectrogram</h2>
+              <button class="download-button" type="button" data-canvas="spectrogram-canvas">PNG</button>
+            </div>
+            <canvas id="spectrogram-canvas" width="1200" height="420"></canvas>
+          </section>
+
+          <section class="panel">
+            <div class="panel-header">
+              <h2>MFCC</h2>
+              <button class="download-button" type="button" data-canvas="mfcc-canvas">PNG</button>
+            </div>
+            <canvas id="mfcc-canvas" width="1200" height="420"></canvas>
+          </section>
+        </div>
+      </section>
+    </main>
+
+    <script src="app.js"></script>
+  </body>
+</html>
