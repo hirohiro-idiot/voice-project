@@ -24,6 +24,8 @@ The long-term goal is to pair an audio file with matching text, extract vowel an
 |-- index.html
 |-- styles.css
 |-- app.js
+|-- audio_only.js
+|-- boundary_debug.js
 |-- tools/
 |   `-- generate_experiment.py
 |-- presets/
@@ -49,7 +51,7 @@ Then open `http://localhost:8000`.
 
 ## Local Experiment Export
 
-For 16-bit PCM WAV files, the helper script can write segment JSON and an experiment card into the repository folders:
+For 16-bit PCM WAV files, the helper script can write preset JSON and an experiment card into the repository folders:
 
 ```bash
 python tools/generate_experiment.py sample.wav aiueo
@@ -65,6 +67,25 @@ The script writes:
 Browser analysis uses the Web Audio API for decoding. FFT, Mel filterbank, MFCC calculation, RMS, zero-crossing rate, spectral centroid, F0 estimation, and signal-based text/audio alignment are implemented in JavaScript.
 
 This is not speech recognition. It is a research tool for estimating phoneme/mora boundary candidates from the audio signal and making the result visible for iteration.
+
+## Boundary Estimation Algorithm
+
+The current boundary pipeline separates audio-only candidate detection from transcript alignment.
+
+1. Audio-only candidates are estimated first from the waveform.
+2. Candidate scores prioritize RMS/silence, then spectral centroid change, MFCC delta, and F0 change.
+3. MFCC deltas are smoothed with a moving average to avoid reacting to tiny within-phoneme changes.
+4. Candidates must be local maxima and at least 200 ms apart.
+5. Transcript-based initial boundaries are computed only as debug anchors.
+6. Final boundaries are attracted to high-scoring nearby audio-only candidates instead of using equal division directly.
+7. The attraction score combines acoustic score, proximity to the transcript anchor, and bonuses for silence/MFCC boundaries.
+8. A debug table reports the initial position, pre-correction position, adopted candidate, reason, score, and final boundary.
+
+Visualization colors:
+
+- Red: audio-only candidate
+- Blue: transcript-based initial boundary
+- Black: final boundary
 
 The preset schema already reserves neutral controls for future natural speech synthesis:
 
