@@ -9,18 +9,172 @@
   <body>
     <main class="app-shell">
       <section class="workspace" aria-labelledby="app-title">
-        <div class="topbar"><div><p class="eyebrow">Browser audio analysis</p><h1 id="app-title">Voice Project</h1></div><div class="status-pill" id="status-pill">Ready</div></div>
-        <label class="drop-zone" id="drop-zone"><input id="file-input" type="file" accept="audio/*,.wav" /><span class="upload-icon" aria-hidden="true">+</span><span class="drop-title">Choose an audio file</span><span class="drop-copy">Analyze WAV, MP3, M4A, and other browser-supported audio files</span></label>
-        <section class="text-panel" aria-labelledby="text-title"><div class="panel-header compact"><h2 id="text-title">Transcript</h2><span id="segment-count">0 segments</span></div><textarea id="transcript-input" rows="3" placeholder="Enter the matching text, for example: aiueo"></textarea></section>
-        <div class="meta-grid" id="meta-grid" aria-live="polite"><div><span>File</span><strong id="file-name">No file selected</strong></div><div><span>Duration</span><strong id="duration">-</strong></div><div><span>Sample Rate</span><strong id="sample-rate">-</strong></div><div><span>Channels</span><strong id="channels">-</strong></div><div><span>RMS</span><strong id="rms">-</strong></div><div><span>Estimated F0</span><strong id="f0">-</strong></div><div><span>Boundary Count</span><strong id="boundary-count">-</strong></div><div><span>Mora Count</span><strong id="mora-count">-</strong></div></div>
-        <div class="visual-grid"><section class="panel"><div class="panel-header"><h2>Waveform</h2><button class="download-button" type="button" data-canvas="waveform-canvas">PNG</button></div><canvas id="waveform-canvas" width="1200" height="360"></canvas></section><section class="panel"><div class="panel-header"><h2>Spectrogram</h2><button class="download-button" type="button" data-canvas="spectrogram-canvas">PNG</button></div><canvas id="spectrogram-canvas" width="1200" height="420"></canvas></section><section class="panel"><div class="panel-header"><h2>MFCC</h2><button class="download-button" type="button" data-canvas="mfcc-canvas">PNG</button></div><canvas id="mfcc-canvas" width="1200" height="420"></canvas></section></div>
-        <section class="results-page" id="results-page" aria-labelledby="results-title"><div class="panel-header"><h2 id="results-title">Analysis Results</h2><div class="button-row"><button class="download-button" id="download-json" type="button">JSON</button><button class="download-button" id="download-card" type="button">MD</button></div></div><div class="segment-table-wrap"><table><thead><tr><th>Token</th><th>Start</th><th>End</th><th>Duration</th><th>RMS</th><th>ZCR</th><th>Centroid</th><th>F0</th><th>MFCC Mean</th></tr></thead><tbody id="segment-table"><tr><td colspan="9">Upload audio and enter matching text to create segments.</td></tr></tbody></table></div></section>
-        <section class="results-page" aria-labelledby="audio-boundary-title"><div class="panel-header"><h2 id="audio-boundary-title">Audio-only Boundary Candidates</h2><label class="toggle-line"><input id="audio-only-toggle" type="checkbox" checked /><span>Show audio-only candidates</span></label></div><div class="segment-table-wrap"><table><thead><tr><th>#</th><th>Time</th><th>Score</th><th>Type</th><th>RMS/Silence</th><th>Centroid</th><th>MFCC</th><th>F0</th></tr></thead><tbody id="audio-boundary-table"><tr><td colspan="8">Upload audio to estimate signal-only boundary candidates.</td></tr></tbody></table></div></section>
-        <section class="results-page" aria-labelledby="boundary-debug-title"><div class="panel-header"><h2 id="boundary-debug-title">Final Boundary Debug</h2></div><div class="segment-table-wrap"><table><thead><tr><th>#</th><th>Initial</th><th>Pre-correction</th><th>Candidate</th><th>Final</th><th>Reason</th><th>Score</th></tr></thead><tbody id="boundary-debug-table"><tr><td colspan="7">Upload audio and enter text to inspect final boundary decisions.</td></tr></tbody></table></div></section>
+        <div class="topbar">
+          <div>
+            <p class="eyebrow">Browser audio analysis</p>
+            <h1 id="app-title">Voice Project</h1>
+          </div>
+          <div class="status-pill" id="status-pill">Ready</div>
+        </div>
+
+        <label class="drop-zone" id="drop-zone">
+          <input id="file-input" type="file" accept="audio/*,.wav" />
+          <span class="upload-icon" aria-hidden="true">+</span>
+          <span class="drop-title">Choose an audio file</span>
+          <span class="drop-copy">Analyze WAV, MP3, M4A, and other browser-supported audio files</span>
+        </label>
+
+        <section class="text-panel" aria-labelledby="text-title">
+          <div class="panel-header compact">
+            <h2 id="text-title">Transcript</h2>
+            <span id="segment-count">0 segments</span>
+          </div>
+          <textarea
+            id="transcript-input"
+            rows="3"
+            placeholder="Enter the matching text, for example: aiueo"
+          ></textarea>
+        </section>
+
+        <div class="meta-grid" id="meta-grid" aria-live="polite">
+          <div><span>File</span><strong id="file-name">No file selected</strong></div>
+          <div><span>Duration</span><strong id="duration">-</strong></div>
+          <div><span>Sample Rate</span><strong id="sample-rate">-</strong></div>
+          <div><span>Channels</span><strong id="channels">-</strong></div>
+          <div><span>RMS</span><strong id="rms">-</strong></div>
+          <div><span>Estimated F0</span><strong id="f0">-</strong></div>
+          <div><span>Boundary Count</span><strong id="boundary-count">-</strong></div>
+          <div><span>Mora Count</span><strong id="mora-count">-</strong></div>
+        </div>
+
+        <div class="visual-grid">
+          <section class="panel">
+            <div class="panel-header">
+              <h2>Waveform</h2>
+              <button class="download-button" type="button" data-canvas="waveform-canvas">PNG</button>
+            </div>
+            <canvas id="waveform-canvas" width="1200" height="360"></canvas>
+          </section>
+          <section class="panel">
+            <div class="panel-header">
+              <h2>Spectrogram</h2>
+              <button class="download-button" type="button" data-canvas="spectrogram-canvas">PNG</button>
+            </div>
+            <canvas id="spectrogram-canvas" width="1200" height="420"></canvas>
+          </section>
+          <section class="panel">
+            <div class="panel-header">
+              <h2>MFCC</h2>
+              <button class="download-button" type="button" data-canvas="mfcc-canvas">PNG</button>
+            </div>
+            <canvas id="mfcc-canvas" width="1200" height="420"></canvas>
+          </section>
+        </div>
+
+        <section class="results-page manual-panel" aria-labelledby="manual-title">
+          <div class="panel-header">
+            <h2 id="manual-title">Manual Annotation</h2>
+            <label class="toggle-line">
+              <input id="manual-priority-toggle" type="checkbox" />
+              <span>Prefer manual annotations</span>
+            </label>
+          </div>
+          <audio id="manual-audio-player"></audio>
+          <div class="transport-row">
+            <button class="download-button" id="play-pause" type="button">Play</button>
+            <button class="download-button" id="stop-audio" type="button">Stop</button>
+            <button class="download-button" id="back-one" type="button">-1s</button>
+            <button class="download-button" id="forward-one" type="button">+1s</button>
+            <select id="playback-rate" aria-label="Playback speed">
+              <option value="0.5">0.5x</option>
+              <option value="1" selected>1x</option>
+              <option value="2">2x</option>
+            </select>
+            <strong id="manual-current-time">0:00.00 / 0:00.00</strong>
+          </div>
+          <div class="annotation-editor">
+            <div>
+              <span>Selection</span>
+              <strong id="manual-selection">Click or drag on the waveform</strong>
+            </div>
+            <label>
+              <span>Label</span>
+              <input id="manual-label" type="text" placeholder="vowel:a, consonant:k, mora:ko" />
+            </label>
+            <button class="download-button" id="add-annotation" type="button">Add</button>
+            <button class="download-button" id="clear-selection" type="button">Clear</button>
+            <button class="download-button" id="download-annotations" type="button">annotations.json</button>
+            <button class="download-button" id="download-manual-presets" type="button">presets/manual</button>
+          </div>
+          <div class="segment-table-wrap">
+            <table class="annotation-table">
+              <thead>
+                <tr>
+                  <th>Label</th>
+                  <th>Start</th>
+                  <th>End</th>
+                  <th>Duration</th>
+                  <th>RMS</th>
+                  <th>F0</th>
+                  <th>Centroid</th>
+                  <th>Formants</th>
+                  <th>MFCC Mean</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody id="manual-annotation-table">
+                <tr><td colspan="10">Upload audio, then click or drag on the waveform to create annotations.</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        <section class="results-page" id="results-page" aria-labelledby="results-title">
+          <div class="panel-header">
+            <h2 id="results-title">Analysis Results</h2>
+            <div class="button-row">
+              <button class="download-button" id="download-json" type="button">JSON</button>
+              <button class="download-button" id="download-card" type="button">MD</button>
+            </div>
+          </div>
+          <div class="segment-table-wrap">
+            <table>
+              <thead>
+                <tr><th>Token</th><th>Start</th><th>End</th><th>Duration</th><th>RMS</th><th>ZCR</th><th>Centroid</th><th>F0</th><th>MFCC Mean</th></tr>
+              </thead>
+              <tbody id="segment-table"><tr><td colspan="9">Upload audio and enter matching text to create segments.</td></tr></tbody>
+            </table>
+          </div>
+        </section>
+
+        <section class="results-page" aria-labelledby="audio-boundary-title">
+          <div class="panel-header">
+            <h2 id="audio-boundary-title">Audio-only Boundary Candidates</h2>
+            <label class="toggle-line"><input id="audio-only-toggle" type="checkbox" checked /><span>Show audio-only candidates</span></label>
+          </div>
+          <div class="segment-table-wrap">
+            <table>
+              <thead><tr><th>#</th><th>Time</th><th>Score</th><th>Type</th><th>RMS/Silence</th><th>Centroid</th><th>MFCC</th><th>F0</th></tr></thead>
+              <tbody id="audio-boundary-table"><tr><td colspan="8">Upload audio to estimate signal-only boundary candidates.</td></tr></tbody>
+            </table>
+          </div>
+        </section>
+
+        <section class="results-page" aria-labelledby="boundary-debug-title">
+          <div class="panel-header"><h2 id="boundary-debug-title">Final Boundary Debug</h2></div>
+          <div class="segment-table-wrap">
+            <table>
+              <thead><tr><th>#</th><th>Initial</th><th>Pre-correction</th><th>Candidate</th><th>Final</th><th>Reason</th><th>Score</th></tr></thead>
+              <tbody id="boundary-debug-table"><tr><td colspan="7">Upload audio and enter text to inspect final boundary decisions.</td></tr></tbody>
+            </table>
+          </div>
+        </section>
       </section>
     </main>
+
     <script src="app.js"></script>
     <script src="audio_only.js"></script>
     <script src="boundary_debug.js"></script>
+    <script src="manual_annotation.js"></script>
   </body>
 </html>
