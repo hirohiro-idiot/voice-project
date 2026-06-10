@@ -15,8 +15,12 @@ function chooseCandidateForBoundary(candidates, initial, chosen, averageSegment)
   const ranked = candidates
     .filter((candidate) => Math.abs(candidate.time - initial) <= searchRadius)
     .filter((candidate) => chosen.every((time) => Math.abs(time - candidate.time) >= MIN_BOUNDARY_DISTANCE))
-    .map((candidate) => ({ candidate, finalScore: scoreFinalCandidate(candidate, initial, averageSegment) }))
+    .map((candidate) => ({
+      candidate,
+      finalScore: scoreFinalCandidate(candidate, initial, averageSegment),
+    }))
     .sort((a, b) => b.finalScore - a.finalScore);
+
   return ranked[0] || null;
 }
 
@@ -35,10 +39,12 @@ function repairFinalBoundaries(boundaries, duration) {
 function alignBoundariesToAudioCandidates(candidates, moraCount, duration) {
   if (moraCount <= 0) return { boundaries: [0, duration], debug: [] };
   if (moraCount === 1) return { boundaries: [0, duration], debug: [] };
+
   const averageSegment = duration / moraCount;
   const chosenTimes = [];
   const debug = [];
   const raw = [0];
+
   for (let slot = 1; slot < moraCount; slot += 1) {
     const initial = (duration * slot) / moraCount;
     const selected = chooseCandidateForBoundary(candidates, initial, chosenTimes, averageSegment);
@@ -51,14 +57,19 @@ function alignBoundariesToAudioCandidates(candidates, moraCount, duration) {
       preCorrection,
       candidateTime: selected?.candidate.time ?? null,
       candidateType: selected?.candidate.type ?? "fallback",
-      reason: selected ? `${selected.candidate.type} candidate attracted by acoustic score` : "fallback: no strong nearby audio-only candidate",
+      reason: selected
+        ? `${selected.candidate.type} candidate attracted by acoustic score`
+        : "fallback: no strong nearby audio-only candidate",
       score: selected?.candidate.score ?? 0,
       finalScore: selected?.finalScore ?? 0,
     });
   }
+
   raw.push(duration);
   const repaired = repairFinalBoundaries(raw, duration);
-  debug.forEach((item, index) => { item.final = repaired[index + 1]; });
+  debug.forEach((item, index) => {
+    item.final = repaired[index + 1];
+  });
   return { boundaries: repaired, debug };
 }
 
@@ -67,16 +78,21 @@ function renderBoundaryDebug(debug) {
     boundaryDebugTable.innerHTML = '<tr><td colspan="7">No final internal boundaries.</td></tr>';
     return;
   }
-  boundaryDebugTable.innerHTML = debug.map((item) => `
-    <tr>
-      <td>${item.index}</td>
-      <td>${item.initial.toFixed(3)} s</td>
-      <td>${item.preCorrection.toFixed(3)} s</td>
-      <td>${item.candidateTime == null ? "-" : `${item.candidateType} @ ${item.candidateTime.toFixed(3)} s`}</td>
-      <td>${item.final.toFixed(3)} s</td>
-      <td>${item.reason}</td>
-      <td>${item.score.toFixed(3)} / ${item.finalScore.toFixed(3)}</td>
-    </tr>`).join("");
+  boundaryDebugTable.innerHTML = debug
+    .map(
+      (item) => `
+        <tr>
+          <td>${item.index}</td>
+          <td>${item.initial.toFixed(3)} s</td>
+          <td>${item.preCorrection.toFixed(3)} s</td>
+          <td>${item.candidateTime == null ? "-" : `${item.candidateType} @ ${item.candidateTime.toFixed(3)} s`}</td>
+          <td>${item.final.toFixed(3)} s</td>
+          <td>${item.reason}</td>
+          <td>${item.score.toFixed(3)} / ${item.finalScore.toFixed(3)}</td>
+        </tr>
+      `,
+    )
+    .join("");
 }
 
 function drawTranscriptInitialBoundaries(duration, moraCount) {
@@ -136,15 +152,23 @@ updateResearchOutputs = function updateResearchOutputsWithDebug() {
     renderBoundaryDebug([]);
     return originalUpdateResearchOutputs();
   }
+
   const candidates = scoreAudioOnlyBoundaries(currentAudio.samples, currentAudio.sampleRate, currentAudio.duration);
   const aligned = alignBoundariesToAudioCandidates(candidates, tokens.length, currentAudio.duration);
   const originalAlign = alignBoundariesToMora;
-  alignBoundariesToMora = function useAudioCandidateBoundaries() { return aligned.boundaries; };
+  alignBoundariesToMora = function useAudioCandidateBoundaries() {
+    return aligned.boundaries;
+  };
   originalUpdateResearchOutputs();
   alignBoundariesToMora = originalAlign;
+
   renderBoundaryDebug(aligned.debug);
   redrawBase();
   drawAudioOnlyBoundaries(candidates);
   drawTranscriptInitialBoundaries(currentAudio.duration, tokens.length);
   drawFinalBoundaries(aligned.boundaries);
 };
+
+transcriptInput?.addEventListener("input", () => {
+  if (currentAudio) updateResearchOutputs();
+});
